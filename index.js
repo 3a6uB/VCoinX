@@ -39,7 +39,7 @@ let URLWS = false;
 let boosterTTL = null,
     tryStartTTL = null,
     updatesEv = false,
-    updatesInterval = 60,
+    updatesInterval = 3,
     updatesLastTime = 0,
     xRestart = true,
     flog = false,
@@ -144,19 +144,19 @@ vConinWS.onUserLoaded((place, score, items, top, firstTime, tick) => {
 
 vConinWS.onBrokenEvent(_ => {
     con("onBrokenEvent", true);
-    xRestart = false;
-    forceRestart(30e3);
+   
+    forceRestart(500);
 });
 
 vConinWS.onAlreadyConnected(_ => {
     con("Обнаружено открытие приложения с другого устройства.", true);
-    forceRestart(30e3);
+    forceRestart(500);
 });
 
 vConinWS.onOffline(_ => {
     if (!xRestart) return;
     con("onOffline", true);
-    forceRestart(2e4);
+    forceRestart(500);
 });
 
 async function startBooster(tw) {
