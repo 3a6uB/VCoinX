@@ -38,9 +38,6 @@ let vk = new VK();
 let URLWS = false;
 let boosterTTL = null,
     tryStartTTL = null,
-    updatesEv = false,
-    updatesInterval = 3,
-    updatesLastTime = 0,
     xRestart = true,
     flog = false,
     offColors = false,
@@ -51,7 +48,7 @@ let boosterTTL = null,
     transferScore = 3e4,
     transferInterval = 36e2,
     transferLastTime = 0,
-    connectServer = 3;
+    conserver = 3;
 
 
 let vConinWS = new VCoinWS();
@@ -68,10 +65,10 @@ vConinWS.onMissClickEvent(_ => {
             return;
         }, 6e4)
     }
-    
+
     if (++missCount > 20)
         forceRestart(4e3);
-    
+
     if (++missCount > 10)
         con("Нажатия не засчитываются сервером, возможно, у Вас проблемы с соединением.", true);
 });
@@ -79,9 +76,9 @@ vConinWS.onMissClickEvent(_ => {
 vConinWS.onReceiveDataEvent(async (place, score) => {
     var n = arguments.length > 2 && void 0 !== arguments[2] && arguments[2],
         trsum = 3e6;
-    
+
     miner.setScore(score);
-    
+
     if (place > 0 && !rl.isQst) {
         if (transferTo && transferScore * 1e3 < score && ((Math.floor(Date.now() / 1000) - transferLastTime) > transferInterval)) {
             try {
@@ -96,7 +93,7 @@ vConinWS.onReceiveDataEvent(async (place, score) => {
                 con("Автоматический перевод не удалася. Ошибка: " + e.message, true);
             }
         }
-        
+
         if (autoBuy && score > 0) {
             for (var i = 0; i < autoBuyItems.length; i++) {
                 if (miner.hasMoney(autoBuyItems[i])) {
@@ -115,7 +112,7 @@ vConinWS.onReceiveDataEvent(async (place, score) => {
                 }
             }
         }
-        
+
         con("Позиция в топе: " + place + "\tКоличество коинов: " + formateSCORE(score, true), "yellow");
     }
 });
@@ -135,7 +132,7 @@ vConinWS.onUserLoaded((place, score, items, top, firstTime, tick) => {
     con("Скорость коинов: " + formateSCORE(tick, true) + " коинов / тик.");
     miner.setActive(items);
     miner.updateStack(items);
-    
+
     boosterTTL && clearInterval(boosterTTL);
     boosterTTL = setInterval(_ => {
         rand(0, 5) > 3 && vConinWS.click();
@@ -144,29 +141,31 @@ vConinWS.onUserLoaded((place, score, items, top, firstTime, tick) => {
 
 vConinWS.onBrokenEvent(_ => {
     con("onBrokenEvent", true);
-   
-    forceRestart(500);
+    xRestart = true;
+    forceRestart(3);
 });
 
 vConinWS.onAlreadyConnected(_ => {
     con("Обнаружено открытие приложения с другого устройства.", true);
-    forceRestart(500);
+    xRestart = true;
+    forceRestart(3);
 });
 
 vConinWS.onOffline(_ => {
     if (!xRestart) return;
     con("onOffline", true);
-    forceRestart(500);
+	xRestart = true;
+    forceRestart(3);
 });
 
 async function startBooster(tw) {
     tryStartTTL && clearTimeout(tryStartTTL);
     tryStartTTL = setTimeout(() => {
-        con("VCoinX legacy is loading.");
-        
+        con("Производится запуск VCoinX Legacy.");
+
         vConinWS.userId = USER_ID;
         vConinWS.run(URLWS, _ => {
-            con("VCoinX legacy was loaded.");
+            con("VCoinX Legacy был успешно запущен.");
             xRestart = true;
         });
     }, (tw || 1e3));
@@ -188,14 +187,14 @@ function lPrices(d) {
 }
 
 rl.on('line', async (line) => {
-    
+
     if (!URLWS) return;
     let temp, item;
-    
+
     switch (line.trim().toLowerCase()) {
         case '':
             break;
-            
+
         case 'debuginformation':
         case 'debuginfo':
         case 'debug':
@@ -208,32 +207,32 @@ rl.on('line', async (line) => {
             console.log("transferInterval", transferInterval);
             console.log("transferLastTime", transferLastTime);
             break;
-            
+
         case 'color':
             setColorsM(offColors = !offColors);
             con("Цвета " + (offColors ? "от" : "в") + "ключены (*^.^*)", "blue");
             break;
-            
+
         case "hideupd":
         case "hideupdate":
             con("Уведомление об обновлении скрыто.");
             updatesEv = false;
             break;
-            
+
         case "stop":
         case "pause":
             xRestart = false;
             vConinWS.close();
             break;
-            
-        case "start":
+
+        case "s":
         case "run":
             if (vConinWS.connected)
                 return con("VCoinX уже запущен и работает!");
             xRestart = true;
             startBooster();
             break;
-            
+
         case 'b':
         case 'buy':
             temp = lPrices(true);
@@ -254,7 +253,7 @@ rl.on('line', async (line) => {
                 else con(e.message, true);
             }
             break;
-            
+
         case 'autobuyitem':
             item = await rl.questionAsync("Введи название ускорения для автоматической покупки [cursor, cpu, cpu_stack, computer, server_vk, quantum_pc, datacenter]: ");
             var array = item.split(" ");
@@ -264,39 +263,39 @@ rl.on('line', async (line) => {
             }
             autoBuyItems = array;
             break;
-            
+
         case 'autobuy':
             autoBuy = !autoBuy;
             con("Автопокупка: " + (autoBuy ? "Включена" : "Отключена"));
             break;
-            
+
         case 'to':
             item = await rl.questionAsync("Введите ID пользователя: ");
             transferTo = parseInt(item.replace(/\D+/g, ""));
             con("Автоматический перевод коинов на vk.com/id" + transferTo);
             break;
-            
+
         case 'ti':
             item = await rl.questionAsync("Введите интервал: ");
             transferInterval = parseInt(item);
             con("Интервал для автоматического перевода " + transferInterval + " секунд");
             break;
-            
+
         case 'tsum':
             item = await rl.questionAsync("Введите сумму: ");
             transferScore = parseInt(item);
             con("Количество коинов для автматического перевода " + transferScore + "");
             break;
-            
+
         case 'p':
         case 'price':
         case 'prices':
             temp = lPrices(true);
             ccon("-- Цены --", "red");
             ccon(temp);
-            
+
             break;
-            
+
         case 'tran':
         case 'transfer':
             let count = await rl.questionAsync("Количество: ");
@@ -304,7 +303,7 @@ rl.on('line', async (line) => {
             let conf = await rl.questionAsync("Вы уверены? [yes]: ");
             id = parseInt(id.replace(/\D+/g, ""));
             if (conf.toLowerCase() != "yes" || !id || !count) return con("Отправка неудачная, вероятно, один из параметров не был указан.", true);
-            
+
             try {
                 await vConinWS.transferToUser(id, count);
                 con("Перевод был выполнен успешно.", "black", "Green");
@@ -317,7 +316,7 @@ rl.on('line', async (line) => {
                 else con(e.message, true);
             }
             break;
-            
+
         case "?":
         case "help":
             ccon("-- VCoinX --", "red");
@@ -338,9 +337,9 @@ rl.on('line', async (line) => {
 for (var argn = 2; argn < process.argv.length; argn++) {
     let cTest = process.argv[argn],
         dTest = process.argv[argn + 1];
-    
+
     switch (cTest.trim().toLowerCase()) {
-        
+
         case '-black':
             {
                 flog && con("Цвета отключены (*^.^*)", "blue");
@@ -348,7 +347,7 @@ for (var argn = 2; argn < process.argv.length; argn++) {
                 argn++;
                 break;
             }
-            
+
         case '-t':
             {
                 if (dTest.length > 80 && dTest.length < 90) {
@@ -358,7 +357,7 @@ for (var argn = 2; argn < process.argv.length; argn++) {
                 }
                 break;
             }
-            
+            // Custom URL
         case '-u':
             {
                 if (dTest.length > 200 && dTest.length < 255) {
@@ -367,7 +366,8 @@ for (var argn = 2; argn < process.argv.length; argn++) {
                 }
                 break;
             }
-            
+
+            // Transfer to ID
         case '-to':
             {
                 if (dTest.length > 1 && dTest.length < 11) {
@@ -376,14 +376,14 @@ for (var argn = 2; argn < process.argv.length; argn++) {
                 }
                 break;
             }
-            
+
         default:
             break;
     }
     if (["-t", "-u", "-to", "-ti", "-tsum", "-autobuyItem"].includes(process.argv[argn])) {
         argn++;
     }
-    
+
     if (process.argv[argn] == '-autobuyitem') {
         let dTest = process.argv[argn + 1];
         if (typeof dTest == "string" && dTest.length > 1 && dTest.length < 20) {
@@ -394,13 +394,13 @@ for (var argn = 2; argn < process.argv.length; argn++) {
             continue;
         }
     }
-    
+
     if (process.argv[argn] == '-tforce') {
         con("Принудительное использование токена включено.")
         tforce = true;
         continue;
     }
-    
+
     if (process.argv[argn] == '-tsum') {
         let dTest = process.argv[argn + 1];
         if (typeof dTest == "string" && dTest.length >= 1 && dTest.length < 10) {
@@ -410,7 +410,7 @@ for (var argn = 2; argn < process.argv.length; argn++) {
             continue;
         }
     }
-    
+
     if (process.argv[argn] == '-ti') {
         let dTest = process.argv[argn + 1];
         if (typeof dTest == "string" && dTest.length >= 1 && dTest.length < 10) {
@@ -420,17 +420,17 @@ for (var argn = 2; argn < process.argv.length; argn++) {
             continue;
         }
     }
-    
+
     if (process.argv[argn] == '-autobuy') {
         autoBuy = true;
         continue;
     }
-    
+
     if (process.argv[argn] == '-flog') {
         flog = true;
         continue;
     }
-    
+
     if (process.argv[argn] == "-h" || process.argv[argn] == "-help") {
         ccon("-- VCoinX arguments --", "red");
         ccon("-help			- помощь.");
@@ -452,7 +452,7 @@ if (!DONEURL || tforce) {
         con("Отсутствует токен, о том, как его получить рассказано на -> github.com/cursedseal/VCoinX", true);
         return process.exit();
     }
-    
+
     (async function inVKProc(token) {
         vk.token = token;
         try {
@@ -461,21 +461,21 @@ if (!DONEURL || tforce) {
             } = (await vk.api.apps.get({
                 app_id: 6915965
             })).items[0];
-            
+
             if (!mobile_iframe_url)
                 throw ("Не удалось получить ссылку на приложение.");
-            
+
             let {
                 id
             } = (await vk.api.users.get())[0];
             if (!id)
                 throw ("Не удалось получить ID пользователя.");
-            
+
             USER_ID = id;
-            
+
             formatWSS(mobile_iframe_url);
             startBooster();
-            
+
         } catch (error) {
             console.error('API Error:', error);
             process.exit();
@@ -488,7 +488,7 @@ if (!DONEURL || tforce) {
         return process.exit();
     }
     USER_ID = parseInt(GSEARCH.query.vk_user_id);
-    
+
     formatWSS(DONEURL);
     startBooster();
 }
@@ -497,26 +497,26 @@ function formatWSS(LINK) {
     let GSEARCH = url.parse(LINK),
         NADDRWS = GSEARCH.protocol.replace("https:", "wss:").replace("http:", "ws:") + "//" + GSEARCH.host + "/channel/",
         CHANNEL = USER_ID % 16;
-
+    // URLWS = NADDRWS + CHANNEL + GSEARCH.search + "&ver=1&pass=".concat(Entit.hashPassCoin(USER_ID, 0));
     URLWS = NADDRWS + CHANNEL + GSEARCH.search + "&pass=".concat(Entit.hashPassCoin(USER_ID, 0));
-    switch (connectServer) {
+    switch (conserver) {
         case 1:
             URLWS.replace("coin.vkforms.ru", "coin.w5.vkforms.ru");
             break;
-            
+
         case 2:
             URLWS.replace("coin.vkforms.ru", "bagosi-go-go.vkforms.ru");
             break;
-            
+
         case 3:
-            URLWS.replace("coin.vkforms.ru", (CHANNEL > 7) ? "bagosi-go-go.vkforms.ru" : "coin.w5.vkforms.ru");
+            URLWS = URLWS.replace("coin.vkforms.ru", (CHANNEL > 7) ? "bagosi-go-go.vkforms.ru" : "coin.w5.vkforms.ru");
             break;
-            
+
         default:
-            URLWS.replace("coin.vkforms.ru", "coin-without-bugs.vkforms.ru");
+            URLWS = URLWS.replace("coin.vkforms.ru", "coin-without-bugs.vkforms.ru");
             break;
     }
-    
+
     flog && console.log("formatWSS: ", URLWS);
     return URLWS;
 }
